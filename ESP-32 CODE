@@ -1,0 +1,264 @@
+#include "BluetoothSerial.h"
+
+BluetoothSerial SerialBT;
+
+const int LED_RED = 27;
+const int LED_GREEN = 25;
+const int LED_BLUE = 26;
+const int buttonPins[] = {15, 4, 17, 18, 21, 22, 23};
+
+int simonSecuencia[4]; // Secuencia de colores para Simón Dice
+int simonIndice = 0;   // Índice de la secuencia actual
+bool esperandoRespuesta = false;
+
+int pin_musica = 13;
+
+int Do = 261;       // Do medio (C4)
+int Do_S = 277;     // Do sostenido (C#4)
+int Re = 294;       // Re medio (D4)
+int Re_S = 311;     // Re sostenido (D#4)
+int Mi = 329;       // Mi medio (E4)
+int Fa = 349;       // Fa medio (F4)
+int Fa_S = 370;     // Fa sostenido (F#4)
+int Sol = 391;      // Sol medio (G4)
+int Sol_S = 415;    // Sol sostenido (G#4)
+int La = 440;       // La medio (A4)
+int La_S = 455;     // La sostenido (A#4)
+int Si = 466;       // Si medio (B4)
+
+// Notas agudas (octava superior)
+int Do_H = 523;     // Do agudo (C5)
+int Do_SH = 554;    // Do sostenido agudo (C#5)
+int Re_H = 587;     // Re agudo (D5)
+int Re_SH = 622;    // Re sostenido agudo (D#5)
+int Mi_H = 659;     // Mi agudo (E5)
+int Fa_H = 698;     // Fa agudo (F5)
+int Fa_SH = 740;    // Fa sostenido agudo (F#5)
+int Sol_H = 783;    // Sol agudo (G5)
+int Sol_SH = 830;   // Sol sostenido agudo (G#5)
+int La_H = 880;     // La agudo (A5)
+int La_SH = 932;   // La sostenido agudo (A#5)
+int Si_H = 987;     // Si agudo (B5)
+
+int notas[] = {Do, Re, Mi, Fa, Sol, La, Si};
+int duraciones[] = {400, 400, 400, 400, 400, 400, 400};
+
+void setup() {
+   randomSeed(analogRead(0));
+  pinMode(pin_musica, OUTPUT);
+  for (int i = 0; i < 7; i++) {
+    pinMode(buttonPins[i], INPUT_PULLUP);
+  }
+  pinMode(LED_RED, OUTPUT);
+  pinMode(LED_GREEN, OUTPUT);
+  pinMode(LED_BLUE, OUTPUT);
+  Serial.begin(115200);
+  SerialBT.begin("RGB KIDS LIGHTS");
+  Serial.println("El Bluetooth ha iniciado y está listo para emparejarse");
+}
+
+void toca(int nota, int duracion) {
+  tone(pin_musica, nota, duracion);
+  delay(duracion + 40);
+  noTone(pin_musica);
+}
+
+void apagarRelays() {
+  digitalWrite(LED_RED, LOW);
+  digitalWrite(LED_GREEN, LOW);
+  digitalWrite(LED_BLUE, LOW);
+}
+
+void activateRelays(int buttonIndex) {
+
+  // Activa LEDs y reproduce la nota correspondiente
+  switch (buttonIndex) {
+    case 0:
+     
+    apagarRelays();
+      digitalWrite(LED_RED, HIGH);
+      toca(notas[0], duraciones[0]);
+      break;
+    case 1:
+    apagarRelays();
+      digitalWrite(LED_GREEN, HIGH);
+      toca(notas[1], duraciones[1]);
+      break;
+    case 2:
+    apagarRelays();
+      digitalWrite(LED_BLUE, HIGH);
+      toca(notas[2], duraciones[2]);
+      break;
+    case 3:
+    apagarRelays();
+      digitalWrite(LED_RED, HIGH);
+      digitalWrite(LED_GREEN, HIGH);
+      toca(notas[3], duraciones[3]);
+      break;
+    case 4:
+    apagarRelays();
+      digitalWrite(LED_GREEN, HIGH);
+      digitalWrite(LED_BLUE, HIGH);
+      toca(notas[4], duraciones[4]);
+      break;
+    case 5:
+    apagarRelays();
+      digitalWrite(LED_RED, HIGH);
+      digitalWrite(LED_BLUE, HIGH);
+      toca(notas[5], duraciones[5]);
+      break;
+    case 6:
+    apagarRelays();
+      digitalWrite(LED_RED, HIGH);
+      digitalWrite(LED_GREEN, HIGH);
+      digitalWrite(LED_BLUE, HIGH);
+      toca(notas[6], duraciones[6]);
+      break;
+  } 
+}
+
+void victoria(){
+            int melodia_victoria[] = {Do_H,Do_H,Do_H,Do_H,Sol_S,Si,Do_H,Si,Do_H};
+             int duracion_victoria[] = {100, 100, 100, 400,400,400,300,100,600};
+             int notas_victoria = 9;
+              // Reproduce la melodía de victoria
+             for (int i = 0; i < notas_victoria; i++) {  
+            toca(melodia_victoria[i], duracion_victoria[i]);
+           
+               }  
+
+}
+
+void derrota() {
+  int melodia_derrota[] = {Si,Fa_H,Fa_H,Fa_H,Mi_H,Re_H,Do_H,Mi_H,Sol,Mi_H,Do_H};
+  int duracion_derrota[] = {100, 200, 100, 150,150,150,100,100,100,100,300};
+  int notas_derrota = 11;
+  for (int i = 0; i < notas_derrota; i++) {
+    toca(melodia_derrota[i], duracion_derrota[i]);
+   
+  } // Cierre del bucle
+} 
+
+void simonDice() {
+  // Genera una secuencia aleatoria de 4 colores entre los 7 posibles
+  for (int i = 0; i < 4; i++) {
+    simonSecuencia[i] = random(0, 7); // 0 a 6, que representan los 7 colores
+  }
+
+  // Muestra la secuencia
+  for (int i = 0; i < 4; i++) {
+    activateRelays(simonSecuencia[i]); // Activa los LEDs según el color
+    delay(1000); // Mantener el LED encendido por 1 segundo
+    // Apaga todos los LEDs
+    digitalWrite(LED_RED, LOW);
+    digitalWrite(LED_GREEN, LOW);
+    digitalWrite(LED_BLUE, LOW);
+    delay(500); // Pausa entre los colores
+  }
+
+  esperandoRespuesta = true;
+  simonIndice = 0;
+
+  // Espera la respuesta del usuario
+  while (esperandoRespuesta) {
+    for (int i = 0; i < 7; i++) {
+      if (digitalRead(buttonPins[i]) == LOW) { // Revisa si el botón está presionado
+        delay(50); // Anti-rebote
+        if (digitalRead(buttonPins[i]) == LOW) { // Confirma que el botón sigue presionado
+          // Verifica si la entrada del usuario es correcta
+          if (i == simonSecuencia[simonIndice]) {
+            activateRelays(i); // Activa el LED del color correspondiente
+            delay(500); // Mantener el LED encendido mientras el usuario lo presiona
+            // Apaga todos los LEDs
+            digitalWrite(LED_RED, LOW);
+            digitalWrite(LED_GREEN, LOW);
+            digitalWrite(LED_BLUE, LOW);
+            simonIndice++;
+            if (simonIndice == 4) { // Verifica si el usuario completó la secuencia
+              victoria();
+              esperandoRespuesta = false;
+            }
+          } else { // Si el usuario falla
+            derrota();
+            esperandoRespuesta = false;
+          }
+        }
+      }
+    }
+  }
+}
+
+
+void normal() {
+  if (SerialBT.available()) {
+    char DatoRecibo = SerialBT.read();
+     if (DatoRecibo == 'M') { 
+    simonDice(); 
+    }
+        switch (DatoRecibo) {
+            case 'R':
+                apagarRelays();
+                digitalWrite(LED_RED, HIGH);
+                toca(notas[0], duraciones[0]);
+                break;
+            case 'G':
+                apagarRelays();
+                digitalWrite(LED_GREEN, HIGH);
+                toca(notas[1], duraciones[1]);
+                break;
+            case 'B':
+                apagarRelays();
+                digitalWrite(LED_BLUE, HIGH);
+                toca(notas[2], duraciones[2]);
+                break;
+            case 'O':
+                apagarRelays();
+                digitalWrite(LED_RED, HIGH);
+                digitalWrite(LED_GREEN, HIGH);
+                toca(notas[3], duraciones[3]);
+                break;
+            case 'C':
+                apagarRelays();
+                digitalWrite(LED_GREEN, HIGH);
+                digitalWrite(LED_BLUE, HIGH);
+                toca(notas[4], duraciones[4]);
+                break;
+            case 'P':
+                apagarRelays();
+                digitalWrite(LED_RED, HIGH);
+                digitalWrite(LED_BLUE, HIGH);
+                toca(notas[5], duraciones[5]);
+                break;
+            case 'W':
+                apagarRelays();
+                digitalWrite(LED_RED, HIGH);
+                digitalWrite(LED_GREEN, HIGH);
+                digitalWrite(LED_BLUE, HIGH);
+                toca(notas[6], duraciones[6]);
+                break;
+          
+    }
+    }
+        
+     else {
+       
+        Serial.print("Entrada no válida: ");
+      
+    }
+
+   
+  
+
+  for (int i = 0; i < 7; i++) {
+    if (digitalRead(buttonPins[i]) == LOW) {
+      activateRelays(i);
+      
+    }
+  }
+ 
+}
+
+void loop() {
+  normal();
+ 
+} 
